@@ -4,7 +4,7 @@ pragma solidity 0.8.18;
 import "forge-std/console.sol";
 import {ExtendedTest} from "./ExtendedTest.sol";
 
-import {Strategy, ERC20} from "../../Strategy.sol";
+import {StrategyFluidLender, ERC20} from "../../StrategyFluidLender.sol";
 import {IStrategyInterface} from "../../interfaces/IStrategyInterface.sol";
 
 // Inherit the events so they can be checked if desired.
@@ -31,6 +31,19 @@ contract Setup is ExtendedTest, IEvents {
     address public management = address(1);
     address public performanceFeeRecipient = address(3);
 
+    // Fluid specific
+    address public constant F_WSTETH = 0x2411802D8BEA09be0aF8fD8D08314a63e706b29C;
+    address public constant F_WSTETH_STAKING = 0x0000000000000000000000000000000000000000;
+
+    address public constant F_USDT = 0x5C20B550819128074FD538Edf79791733ccEdd18;
+    address public constant F_USDT_STAKING = 0x490681095ed277B45377d28cA15Ac41d64583048;
+
+    address public constant F_USDC = 0x9Fb7b4477576Fe5B32be4C1843aFB1e55F251B33;
+    address public constant F_USDC_STAKING = 0x2fA6c95B69c10f9F52b8990b6C03171F13C46225;
+
+    address public constant F_WETH = 0x90551c1795392094FE6D29B758EcCD233cFAa260;
+    address public constant F_WETH_STAKING = 0x0000000000000000000000000000000000000000;
+
     // Address of the real deployed Factory
     address public factory;
 
@@ -40,7 +53,7 @@ contract Setup is ExtendedTest, IEvents {
 
     // Fuzz from $0.01 of 1e6 stable coins up to 1 trillion of a 1e18 coin
     uint256 public maxFuzzAmount = 1e30;
-    uint256 public minFuzzAmount = 10_000;
+    uint256 public minFuzzAmount = 1e6;
 
     // Default profit max unlock time is set for 10 days
     uint256 public profitMaxUnlockTime = 10 days;
@@ -49,7 +62,7 @@ contract Setup is ExtendedTest, IEvents {
         _setTokenAddrs();
 
         // Set asset
-        asset = ERC20(tokenAddrs["DAI"]);
+        asset = ERC20(tokenAddrs["USDT"]);
 
         // Set decimals
         decimals = asset.decimals();
@@ -71,7 +84,7 @@ contract Setup is ExtendedTest, IEvents {
     function setUpStrategy() public returns (address) {
         // we save the strategy as a IStrategyInterface to give it the needed interface
         IStrategyInterface _strategy = IStrategyInterface(
-            address(new Strategy(address(asset), "Tokenized Strategy"))
+            address(new StrategyFluidLender(address(asset), "Tokenized Strategy", F_USDT, F_USDT_STAKING))
         );
 
         // set keeper
@@ -147,12 +160,9 @@ contract Setup is ExtendedTest, IEvents {
     }
 
     function _setTokenAddrs() internal {
-        tokenAddrs["WBTC"] = 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599;
-        tokenAddrs["YFI"] = 0x0bc529c00C6401aEF6D220BE8C6Ea1667F6Ad93e;
+        tokenAddrs["WSTETH"] = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
         tokenAddrs["WETH"] = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-        tokenAddrs["LINK"] = 0x514910771AF9Ca656af840dff83E8264EcF986CA;
         tokenAddrs["USDT"] = 0xdAC17F958D2ee523a2206206994597C13D831ec7;
-        tokenAddrs["DAI"] = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
         tokenAddrs["USDC"] = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
     }
 }
