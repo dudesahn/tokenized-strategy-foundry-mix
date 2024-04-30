@@ -39,11 +39,19 @@ contract StrategyFluidLender is Base4626Compounder, TradeFactorySwapper {
     }
 
     function _stake() internal override {
-        staking.stake(balanceOfVault());
+        // if there is no staking contract, skip this step
+        // deposit any loose vault tokens to the staking contract
+        if (address(staking) != address(0)) {
+            staking.stake(balanceOfVault());
+        }
     }
 
     function _unStake(uint256 _amount) internal virtual override {
-        staking.withdraw(_amount);
+        // if there is no staking contract, skip this step
+        // _amount is already in vault shares, no need to convert
+        if (address(staking) != address(0)) {
+            staking.withdraw(_amount);
+        }
     }
 
     function vaultsMaxWithdraw() public view virtual override returns (uint256) {
@@ -57,7 +65,9 @@ contract StrategyFluidLender is Base4626Compounder, TradeFactorySwapper {
     /* ========== TRADE FACTORY FUNCTIONS ========== */
 
     function _claimRewards() internal override {
-        staking.getReward();
+        if (address(staking) != address(0)) {
+            staking.getReward();
+        }
     }
 
     /**
