@@ -67,6 +67,8 @@ contract Setup is ExtendedTest, IEvents {
         // // USDC
         // fluidVault = 0x9Fb7b4477576Fe5B32be4C1843aFB1e55F251B33;
         // fluidStaking = 0x2fA6c95B69c10f9F52b8990b6C03171F13C46225;
+
+        // Can use standalone 4626 as strategy here
         // // WETH
         // fluidVault = 0x90551c1795392094FE6D29B758EcCD233cFAa260;
         // fluidStaking = 0x0000000000000000000000000000000000000000;

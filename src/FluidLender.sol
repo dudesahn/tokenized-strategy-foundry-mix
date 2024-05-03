@@ -19,9 +19,13 @@ contract StrategyFluidLender is Base4626Compounder, TradeFactorySwapper {
      * @param _vault ERC4626 vault token to use.
      * @param _staking Staking pool to use.
      */
-    constructor(address _asset, string memory _name, address _vault, address _staking, address _GOV)
-        Base4626Compounder(_asset, _name, _vault)
-    {
+    constructor(
+        address _asset,
+        string memory _name,
+        address _vault,
+        address _staking,
+        address _GOV
+    ) Base4626Compounder(_asset, _name, _vault) {
         staking = IStaking(_staking);
         require(_vault == staking.stakingToken(), "token mismatch");
         GOV = _GOV;
@@ -34,40 +38,28 @@ contract StrategyFluidLender is Base4626Compounder, TradeFactorySwapper {
     /**
      * @notice Balance of vault tokens staked in the staking contract
      */
-    function balanceOfStake() public view virtual override returns (uint256) {
+    function balanceOfStake() public view override returns (uint256) {
         return staking.balanceOf(address(this));
     }
 
     function _stake() internal override {
-        // if there is no staking contract, skip this step
         // deposit any loose vault tokens to the staking contract
-        if (address(staking) != address(0)) {
-            staking.stake(balanceOfVault());
-        }
+        staking.stake(balanceOfVault());
     }
 
-    function _unStake(uint256 _amount) internal virtual override {
-        // if there is no staking contract, skip this step
+    function _unStake(uint256 _amount) internal override {
         // _amount is already in vault shares, no need to convert
-        if (address(staking) != address(0)) {
-            staking.withdraw(_amount);
-        }
+        staking.withdraw(_amount);
     }
 
-    function vaultsMaxWithdraw() public view virtual override returns (uint256) {
+    function vaultsMaxWithdraw() public view override returns (uint256) {
         return vault.convertToAssets(vault.maxRedeem(address(staking)));
-    }
-
-    function availableDepositLimit(address /*_owner*/) public view virtual override returns (uint256) {
-        return vault.maxDeposit(address(this));
     }
 
     /* ========== TRADE FACTORY FUNCTIONS ========== */
 
     function _claimRewards() internal override {
-        if (address(staking) != address(0)) {
-            staking.getReward();
-        }
+        staking.getReward();
     }
 
     /**
@@ -76,6 +68,7 @@ contract StrategyFluidLender is Base4626Compounder, TradeFactorySwapper {
      * @param _token Address of token to add.
      */
     function addToken(address _token) external onlyManagement {
+        _checkIfProtected(_token);
         _addToken(_token, address(asset));
     }
 
@@ -88,9 +81,36 @@ contract StrategyFluidLender is Base4626Compounder, TradeFactorySwapper {
         _removeToken(_token, address(asset));
     }
 
-    /*//////////////////////////////////////////////////////////////
-                GOVERNANCE:
-    //////////////////////////////////////////////////////////////*/
+    /**
+     * @notice Check for tokens that shouldn't be moved (swept or swapped).
+     * @dev Use this for all tokens/tokenized positions this contract
+     * manages on a *persistent* basis (e.g. not just for swapping back to
+     * asset ephemerally).
+     */
+    function protectedTokens() public view returns (address[] memory) {
+        address[] memory protected = new address[](2);
+        protected[0] = address(asset);
+        protected[1] = address(vault);
+        return protected;
+    }
+
+    // checks if a given token is on our protectedTokens list
+    function _checkIfProtected(address _token) internal view {
+        address[] memory _protectedTokens = protectedTokens();
+        for (uint256 i; i < _protectedTokens.length; ++i) {
+            require(_token != _protectedTokens[i], "!protected");
+        }
+    }
+
+    /* ========== GOV-ONLY FUNCTIONS ========== */
+
+    /**
+     * @dev Require that the call is coming from governance.
+     */
+    modifier onlyGovernance() {
+        require(msg.sender == GOV, "!gov");
+        _;
+    }
 
     /**
      * @notice Use to update our trade factory.
@@ -104,12 +124,7 @@ contract StrategyFluidLender is Base4626Compounder, TradeFactorySwapper {
     /// @notice Sweep of non-asset ERC20 tokens to governance (onlyGovernance)
     /// @param _token The ERC20 token to sweep
     function sweep(address _token) external onlyGovernance {
-        require(_token != address(asset), "!asset");
+        _checkIfProtected(_token);
         ERC20(_token).safeTransfer(GOV, ERC20(_token).balanceOf(address(this)));
-    }
-
-    modifier onlyGovernance() {
-        require(msg.sender == GOV, "!gov");
-        _;
     }
 }
